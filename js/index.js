@@ -46,7 +46,7 @@
         const layouts = ['grid', 'month', 'timeline'];
         const layoutIndex = layouts.indexOf(currentLayout);
         currentLayout = layouts[(layoutIndex + 1) % layouts.length];
-
+        // re-render so the currently selected layout always has fresh content
         renderCalendar();
     }
 
@@ -70,14 +70,15 @@
         if (currentLayout === 'month') {
             if (isCurrentYearSelected()) {
                 currentMonth = new Date().getMonth();
+            } else {
+                // default to the top of the year when viewing past years
+                currentMonth = 0;
             }
             container.classList.add('month-view');
             monthNav.classList.add('active');
             updateMonthView();
         } else if (currentLayout === 'timeline') {
             container.classList.add('timeline-view');
-            // center the current date row when switching into timeline
-            requestAnimationFrame(() => scrollToToday({ behavior: 'auto' }));
         }
     }
 
@@ -299,9 +300,20 @@
     }
 
     function scrollToToday({ behavior = 'auto' } = {}) {
-        if (!isCurrentYearSelected()) return;
         const scrollArea = getScrollArea();
         if (!scrollArea) return;
+
+        // For past years, default to the top (no "jump to today")
+        if (!isCurrentYearSelected()) {
+            // tell header scroll handler to ignore scroll events briefly
+            ignoringScrollUntil = Date.now() + 150;
+            if (currentLayout === 'month') {
+                currentMonth = 0;
+                updateMonthView();
+            }
+            scrollArea.scrollTo({ top: 0, behavior: 'auto' });
+            return;
+        }
 
         const todayStr = getTodayDateStr();
 
