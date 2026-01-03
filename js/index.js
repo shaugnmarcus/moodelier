@@ -71,6 +71,12 @@
             }
         });
 
+        // ensure the visible month is revealed in month view
+        const activeCard = cards[currentMonth];
+        if (activeCard) {
+            activeCard.classList.add('in-view');
+        }
+
         document.getElementById('navMonthLabel').textContent = `${MONTHS[currentMonth]} ${YEAR}`;
         document.getElementById('prevMonth').disabled = (currentMonth === 0);
         document.getElementById('nextMonth').disabled = (currentMonth === 11);
@@ -237,6 +243,49 @@
 
         // reapply the current layout
         applyLayout();
+
+        // reveal month cards only when they scroll into view
+        setupMonthCardReveal();
+    }
+
+    // SCROLL REVEAL (month cards)
+    function setupMonthCardReveal() {
+        const cards = document.querySelectorAll('.month-card');
+        if (!cards.length) return;
+
+        // month view: only one card is visible; reveal it immediately
+        if (currentLayout === 'month') {
+            const activeCard = cards[currentMonth];
+            if (activeCard) {
+                activeCard.classList.add('in-view');
+            }
+        }
+
+        // fallback: if IntersectionObserver isn't supported, reveal everything
+        if (!('IntersectionObserver' in window)) {
+            cards.forEach(card => card.classList.add('in-view'));
+            return;
+        }
+
+        const observer = new IntersectionObserver(
+            entries => {
+                entries.forEach(entry => {
+                    if (!entry.isIntersecting) return;
+                    entry.target.classList.add('in-view');
+                    observer.unobserve(entry.target);
+                });
+            },
+            {
+                threshold: 0.15,
+                rootMargin: '0px 0px -10% 0px'
+            }
+        );
+
+        cards.forEach(card => {
+            // don't re-observe already revealed cards
+            if (card.classList.contains('in-view')) return;
+            observer.observe(card);
+        });
     }
 
     // builds a single timeline row
