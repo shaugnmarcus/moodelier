@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Liquid Glass Mood Tracker</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+    <div class="ambient-light"></div>
+
+    <header>
+        <h1>Moodelier</h1>
+        <div style="display: flex; gap: 10px;">
+            <button class="glass-btn" onclick="changeYear()">Change Year</button>
+            <button class="glass-btn layout-btn" onclick="toggleLayout()" title="Change Layout">
+                <svg id="layoutIcon" viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
+                <span>Layout</span>
+            </button>
+            <button class="glass-btn" onclick="openProfile()">Profile</button>
+        </div>
+    </header>
+
+    <!-- only shows when in month view mode -->
+    <div class="month-nav" id="monthNav">
+        <button class="nav-arrow" id="prevMonth" onclick="navigateMonth(-1)">&#8592;</button>
+        <div class="nav-month-label" id="navMonthLabel">January 2026</div>
+        <button class="nav-arrow" id="nextMonth" onclick="navigateMonth(1)">&#8594;</button>
+    </div>
+
+    <div class="calendar-container" id="calendar">
+        <!-- calendar gets built here -->
+    </div>
+
+    <!-- VIEW ENTRY -->
+    <div class="modal-overlay" id="viewModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="viewDateTitle">January 1, 2024</span>
+                <button class="close-btn" onclick="closeModal('viewModal')">&times;</button>
+            </div>
+            <div class="entry-view">
+                <div class="view-mood-icon" id="viewMoodIcon">😐</div>
+                <div class="view-date" id="viewMoodLevel">Okay</div>
+                <div class="view-note" id="viewNote">No notes added.</div>
+                <button class="glass-btn" onclick="switchToEdit()">Edit Entry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- EDIT ENTRY -->
+    <div class="modal-overlay" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <span class="modal-title" id="editDateTitle">January 1, 2024</span>
+                <button class="close-btn" onclick="closeModal('editModal')">&times;</button>
+            </div>
+            <div class="mood-selector">
+                <div class="mood-opt" style="background: var(--mood-1); box-shadow: 0 0 10px var(--mood-1);" data-level="1" title="Terrible"></div>
+                <div class="mood-opt" style="background: var(--mood-2); box-shadow: 0 0 10px var(--mood-2);" data-level="2" title="Bad"></div>
+                <div class="mood-opt" style="background: var(--mood-3); box-shadow: 0 0 10px var(--mood-3);" data-level="3" title="Okay"></div>
+                <div class="mood-opt" style="background: var(--mood-4); box-shadow: 0 0 10px var(--mood-4);" data-level="4" title="Good"></div>
+                <div class="mood-opt" style="background: var(--mood-5); box-shadow: 0 0 10px var(--mood-5);" data-level="5" title="Excellent"></div>
+            </div>
+            <div class="emoji-grid" id="emojiGrid"></div>
+            <textarea id="noteInput" placeholder="What's on your mind? (Optional)"></textarea>
+            <div class="action-row">
+                <button class="glass-btn" onclick="saveEntry()">Save</button>
+                <button class="glass-btn btn-secondary" onclick="clearEntry()" type="button">Clear</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- WARNING POPUP -->
+    <div class="modal-overlay" id="warningModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="warning-icon" id="warningIcon">⚠️</div>
+            <h2 class="modal-title" style="text-align: center; margin-bottom: 10px;" id="warningTitle">Wait a Moment</h2>
+            <p class="warning-text" id="warningMsg">Something needs your attention.</p>
+            <div class="action-row">
+                <button class="glass-btn btn-secondary" onclick="closeModal('warningModal')">Go Back</button>
+                <button class="glass-btn" id="warningProceedBtn">Edit Anyway</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- INSIGHTS -->
+    <div class="modal-overlay" id="analyticsModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <div class="modal-header">
+                <span class="modal-title">Your Insights</span>
+                <button class="close-btn" onclick="closeModal('analyticsModal')">&times;</button>
+            </div>
+            
+            <div class="analytics-container">
+                <!-- all time stuff -->
+                <div class="chart-title" style="margin-bottom: 10px;">All Time</div>
+                <div class="stat-cards-row">
+                    <div class="stat-card">
+                        <div class="stat-val" id="statTotal">0</div>
+                        <div class="stat-label">Total Entries</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="statAvg" style="color: var(--mood-3);">--</div>
+                        <div class="stat-label">Avg Mood</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="statMonthCompare">--</div>
+                        <div class="stat-label" id="statMonthLabel">vs Last Month</div>
+                    </div>
+                </div>
+
+                <!-- recent activity -->
+                <div class="chart-title" style="margin-top: 25px; margin-bottom: 10px;">Last 30 Days</div>
+                <div class="stat-cards-row">
+                    <div class="stat-card">
+                        <div class="stat-val" id="stat30DayAvg" style="color: var(--mood-3);">--</div>
+                        <div class="stat-label">Avg Mood</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-val" id="statTopEmoji">--</div>
+                        <div class="stat-label">Top Emoji</div>
+                    </div>
+                </div>
+
+                <div class="chart-section" style="margin-top: 15px;">
+                    <div class="chart-title">30 Day Trend</div>
+                    <svg class="trend-svg" id="trendGraph" preserveAspectRatio="none">
+                        <!-- js draws the line here -->
+                    </svg>
+                </div>
+
+                <!-- yearly charts -->
+                <div class="chart-section" style="margin-top: 15px;">
+                    <div class="chart-title">Weekly Pattern</div>
+                    <div class="bar-chart" id="weeklyChart">
+                        <!-- bar chart goes here -->
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-title">Mood Distribution</div>
+                    <div id="distChart">
+                        <!-- distribution bars -->
+                    </div>
+                </div>
+
+                <div class="chart-section">
+                    <div class="chart-title">Monthly Averages</div>
+                    <div class="bar-chart" id="monthlyChart">
+                        <!-- monthly bars -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- YEAR PICKER -->
+    <div class="modal-overlay" id="yearModal">
+        <div class="modal-content" style="max-width: 320px;">
+            <div class="modal-header">
+                <span class="modal-title">Select Year</span>
+                <button class="close-btn" onclick="closeModal('yearModal')">&times;</button>
+            </div>
+            <div class="year-list" id="yearList"></div>
+        </div>
+    </div>
+
+    <!-- PROFILE -->
+    <div class="modal-overlay" id="profileModal">
+        <div class="modal-content" style="max-width: 400px;">
+            <div class="modal-header">
+                <span class="modal-title">Profile</span>
+                <button class="close-btn" onclick="closeModal('profileModal')">&times;</button>
+            </div>
+            <div id="profileContent">
+                <!-- filled in by js depending on login state -->
+            </div>
+        </div>
+    </div>
+
+<script src="js/index.js"></script>
+</body>
+</html>

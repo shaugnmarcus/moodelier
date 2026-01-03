@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Moodelier - Login</title>
+    <link rel="stylesheet" href="css/style.css">
+    <!-- firebase -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+</head>
+<body>
+
+    <div class="ambient-light"></div>
+
+    <div class="center-wrapper">
+        <div class="auth-container">
+            <div class="glass-card">
+                <div class="brand-header">
+                    <h1>Moodelier</h1>
+                    <p>Track your days in color</p>
+                </div>
+
+                <!-- login/signup tabs -->
+                <div class="toggle-container">
+                    <div class="toggle-slider" id="toggleSlider"></div>
+                    <button class="toggle-btn active" id="loginTab" onclick="switchTab('login')">Log In</button>
+                    <button class="toggle-btn" id="signupTab" onclick="switchTab('signup')">Sign Up</button>
+                </div>
+
+                <div class="forms-wrapper">
+                    
+                    <!-- LOGIN -->
+                    <form id="loginForm" class="auth-form active" onsubmit="handleLogin(event)">
+                        <div class="form-group">
+                            <!-- mail icon -->
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                            <input type="email" class="glass-input" placeholder="Email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <!-- lock icon -->
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input type="password" class="glass-input" placeholder="Password" required>
+                        </div>
+
+                        <button type="submit" class="submit-btn">Enter Journal</button>
+                        <a href="#" class="forgot-link">Forgot Password?</a>
+                    </form>
+
+                    <!-- SIGNUP -->
+                    <form id="signupForm" class="auth-form" onsubmit="handleSignup(event)">
+                        <div class="form-group">
+                            <!-- user icon -->
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <input type="text" class="glass-input" placeholder="Username" required>
+                        </div>
+
+                        <div class="form-group">
+                            <!-- mail icon -->
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>
+                            <input type="email" class="glass-input" placeholder="Email" required>
+                        </div>
+
+                        <div class="form-group">
+                            <!-- lock icon -->
+                            <svg class="input-icon" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                            <input type="password" id="spass" class="glass-input" placeholder="Password (Min 6 chars)" required>
+                            <div class="error-msg" id="passError">Password is too short</div>
+                        </div>
+
+                        <button type="submit" class="submit-btn">Create Account</button>
+                    </form>
+
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/auth.js"></script>
+</body>
+</html>
