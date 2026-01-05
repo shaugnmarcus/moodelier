@@ -1,3 +1,10 @@
+    // update the year button label to just the current year
+    function updateYearButton() {
+        const yearBtn = document.getElementById('yearBtn');
+        if (yearBtn) {
+            yearBtn.textContent = YEAR;
+        }
+    }
     // FIREBASE CONFIG
     const firebaseConfig = {
         apiKey: "AIzaSyBwhgcm1NSklD2ZlnWHfiyXeXBgAHoJUUY",
@@ -42,37 +49,97 @@
         return formatDate(new Date());
     }
 
-    // LAYOUT STUFF
-    function toggleLayout() {
-        const layouts = ['grid', 'month', 'timeline'];
-        const layoutIndex = layouts.indexOf(currentLayout);
-        currentLayout = layouts[(layoutIndex + 1) % layouts.length];
-        // Reset header bar state completely (show header, reset transforms, etc.)
+    function resetHeaderBarState() {
         const header = getHeader();
-        if (header) {
-            header.classList.remove('is-hidden');
-            header.style.transform = '';
+        if (!header) return;
+        header.classList.remove('is-hidden', 'scrolled');
+        header.style.transform = '';
+    }
+
+    function resetScrollAfterLayoutSwitch() {
+        const scrollArea = getScrollArea();
+        if (!scrollArea) return;
+        // prevent the header scroll handler from immediately re-hiding the header
+        ignoringScrollUntil = Date.now() + 200;
+        // always reset to top when switching layouts
+        scrollArea.scrollTo({ top: 0, behavior: 'auto' });
+    }
+
+    // LAYOUT STUFF
+    let showDotsMonthSeparators = false;
+
+    const LAYOUTS = ['grid', 'month', 'timeline', 'dots'];
+    const LAYOUT_LABELS = {
+        grid: 'Grid',
+        month: 'Month',
+        timeline: 'Timeline',
+        dots: 'Dots'
+    };
+    const LAYOUT_ICONS = {
+        grid: '<path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/>',
+        month: '<path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/>',
+        timeline: '<path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>',
+        dots: '<circle cx="5" cy="5" r="2"/><circle cx="12" cy="5" r="2"/><circle cx="19" cy="5" r="2"/><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/><circle cx="5" cy="19" r="2"/><circle cx="12" cy="19" r="2"/><circle cx="19" cy="19" r="2"/>'
+    };
+
+    function changeLayout() {
+        const list = document.getElementById('layoutList');
+        if (!list) return;
+
+        // only build once
+        if (!list.hasChildNodes()) {
+            const fragment = document.createDocumentFragment();
+            LAYOUTS.forEach(layoutKey => {
+                const option = document.createElement('div');
+                option.className = 'year-option layout-option';
+                option.dataset.layout = layoutKey;
+                option.innerHTML = `
+                    <span>${LAYOUT_LABELS[layoutKey] || layoutKey}</span>
+                `;
+                option.onclick = () => selectLayout(layoutKey);
+                fragment.appendChild(option);
+            });
+            list.appendChild(fragment);
         }
-        // re-render so the currently selected layout always has fresh content
+
+        // highlight current layout
+        list.querySelectorAll('[data-layout]').forEach(el => {
+            if (el.dataset.layout === currentLayout) el.classList.add('selected');
+            else el.classList.remove('selected');
+        });
+
+        openModal('layoutModal');
+    }
+
+    function selectLayout(layoutKey) {
+        closeModal('layoutModal');
+        if (!layoutKey || layoutKey === currentLayout) return;
+        currentLayout = layoutKey;
+
+        resetHeaderBarState();
+        // re-render so the selected layout always has fresh content
         renderCalendar();
+
+        // reset scroll AFTER DOM updates so it always sticks
+        requestAnimationFrame(() => resetScrollAfterLayoutSwitch());
+
+        // show the toast every time layouts change
+        showJumpToTodayToast();
     }
 
     function applyLayout() {
         const container = document.getElementById('calendar');
         const monthNav = document.getElementById('monthNav');
+        const dotsOptions = document.getElementById('dotsOptions');
         const icon = document.getElementById('layoutIcon');
 
         // clear layout classes first
-        container.classList.remove('month-view', 'timeline-view');
+        container.classList.remove('month-view', 'timeline-view', 'dots-view');
         monthNav.classList.remove('active');
+        if (dotsOptions) dotsOptions.classList.remove('active');
 
         // swap icon depending on which view we're in
-        const icons = {
-            grid: '<path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/>',
-            month: '<path d="M19 4h-1V2h-2v2H8V2H6v2H5c-1.1 0-2 .9-2 2v14c0 1.1.9 2 2 2h14c1.1 0 2-.9 2-2V6c0-1.1-.9-2-2-2zm0 16H5V9h14v11zM7 11h5v5H7z"/>',
-            timeline: '<path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/>'
-        };
-        icon.innerHTML = icons[currentLayout];
+        if (icon) icon.innerHTML = LAYOUT_ICONS[currentLayout] || LAYOUT_ICONS.grid;
 
         if (currentLayout === 'month') {
             if (isCurrentYearSelected()) {
@@ -86,6 +153,96 @@
             updateMonthView();
         } else if (currentLayout === 'timeline') {
             container.classList.add('timeline-view');
+            ensureCurrentTimelineMonthExpanded();
+        } else if (currentLayout === 'dots') {
+            container.classList.add('dots-view');
+            if (dotsOptions) dotsOptions.classList.add('active');
+        }
+    }
+
+    function toggleDotsMonthSeparators() {
+        const checkbox = document.getElementById('dotsMonthSeparators');
+        showDotsMonthSeparators = checkbox ? checkbox.checked : false;
+        // re-render dots container only
+        renderDotsView();
+    }
+
+    function updateDotsColumns() {
+        const dots = document.querySelector('.dots-container');
+        const calendar = document.getElementById('calendar');
+        if (!dots || !calendar) return;
+
+        const styles = getComputedStyle(dots);
+        const dot = Math.max(1, parseFloat(styles.getPropertyValue('--dot-size')) || 10);
+        const gap = Math.max(0, parseFloat(styles.getPropertyValue('--dot-gap')) || 5);
+        const maxCols = 22;
+
+        const paddingLeft = parseFloat(styles.paddingLeft) || 0;
+        const paddingRight = parseFloat(styles.paddingRight) || 0;
+        const available = Math.max(0, calendar.getBoundingClientRect().width - (paddingLeft + paddingRight));
+
+        // width formula: cols*dot + (cols-1)*gap <= available
+        const idealCols = Math.max(1, Math.floor((available + gap) / (dot + gap)));
+        const cols = Math.min(maxCols, idealCols);
+        dots.style.setProperty('--dots-cols', String(cols));
+    }
+
+    function renderDotsView() {
+        const container = document.getElementById('calendar');
+        // remove existing dots container if any
+        const existingDots = container.querySelector('.dots-container');
+        if (existingDots) existingDots.remove();
+
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'dots-container';
+
+        const today = new Date();
+        today.setHours(12, 0, 0, 0);
+
+        MONTHS.forEach((monthName, monthIndex) => {
+            // optionally add month separator
+            if (showDotsMonthSeparators) {
+                const sep = document.createElement('div');
+                sep.className = 'dots-month-separator';
+                sep.textContent = monthName.substring(0, 3);
+                dotsContainer.appendChild(sep);
+            }
+
+            const daysInMonth = new Date(YEAR, monthIndex + 1, 0).getDate();
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dateStr = `${YEAR}-${String(monthIndex + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dateObj = new Date(YEAR, monthIndex, day, 12, 0, 0, 0);
+                const entry = getEntry(dateStr);
+
+                const dot = document.createElement('div');
+                dot.className = 'dots-dot';
+
+                if (entry) {
+                    // has entry - colored
+                    dot.style.background = MOOD_COLORS[entry.level - 1];
+                    dot.classList.add('filled');
+                } else if (dateObj <= today) {
+                    // past or today without entry - full opaque white
+                    dot.classList.add('past');
+                } else {
+                    // future - less opaque
+                    dot.classList.add('future');
+                }
+
+                dotsContainer.appendChild(dot);
+            }
+        });
+
+        container.appendChild(dotsContainer);
+        updateDotsColumns();
+    }
+
+    function ensureCurrentTimelineMonthExpanded() {
+        // No auto-scrolling anymore; just expand the current month when in timeline.
+        if (!isCurrentYearSelected()) return;
+        const monthIndex = new Date().getMonth();
+        if (collapsedMonths.has(monthIndex)) {
+            toggleTimelineMonth(monthIndex);
         }
     }
 
@@ -155,6 +312,7 @@
         YEAR = selectedYear;
         closeModal('yearModal');
         renderCalendar();
+        updateYearButton();
     }
 
     // ON PAGE LOAD
@@ -164,6 +322,8 @@
         setupHeaderSizing();
         setupHeaderScrollBehavior();
         setupCalendarClickDelegation();
+        showJumpToTodayToast();
+        updateYearButton();
         
         // when user logs in or out
         auth.onAuthStateChanged(async user => {
@@ -179,6 +339,39 @@
             }
         });
     });
+
+    function hideJumpToTodayToast() {
+        const existing = document.getElementById('jumpTodayToast');
+        if (existing) existing.remove();
+    }
+
+    function showJumpToTodayToast() {
+        if (currentLayout === 'dots') {
+            hideJumpToTodayToast(); // never show in dots layout!!
+            return;
+        }
+        
+        if (document.getElementById('jumpTodayToast')) return;
+
+        const wrap = document.createElement('div');
+        wrap.id = 'jumpTodayToast';
+        wrap.className = 'jump-today-toast';
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'glass-btn';
+        button.textContent = 'Jump to Today';
+        button.title = 'Jump to today';
+
+        button.addEventListener('click', () => {
+            scrollToToday({ behavior: 'smooth' });
+            // disappear after any click; it will come back on reload or layout switch
+            hideJumpToTodayToast();
+        });
+
+        wrap.appendChild(button);
+        document.body.appendChild(wrap);
+    }
 
     // single event listener for all calendar/timeline clicks (better perf than 365+ individual handlers)
     function setupCalendarClickDelegation() {
@@ -291,12 +484,12 @@
         // append everything at once to avoid reflows
         container.appendChild(fragment);
         container.appendChild(timelineFragment);
+        // build dots view
+        renderDotsView();
         // reapply the current layout
         applyLayout();
         // reveal month cards only when they scroll into view
         setupMonthCardReveal();
-        // jump to today's position after refresh/render (all layouts)
-        requestAnimationFrame(() => scrollToToday({ behavior: 'auto' }));
     }
 
     function scrollToToday({ behavior = 'auto' } = {}) {
@@ -400,6 +593,7 @@
 
         update();
         window.addEventListener('resize', update, { passive: true });
+        window.addEventListener('resize', updateDotsColumns, { passive: true });
     }
 
     function setupHeaderScrollBehavior() {

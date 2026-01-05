@@ -125,6 +125,16 @@
             border-color: rgba(255, 255, 255, 0.4);
         }
 
+        /* jump-to-today toast */
+        .jump-today-toast {
+            position: fixed;
+            --toast-offset: 20px;
+            right: var(--toast-offset);
+            bottom: var(--toast-offset);
+            z-index: 950;
+            pointer-events: auto;
+        }
+
         /* CALENDAR GRID */
         .calendar-container {
             display: grid;
@@ -517,6 +527,20 @@
         .year-option:hover { background: rgba(255,255,255,0.1); }
         .year-option.selected { background: rgba(255,255,255,0.15); font-weight: bold; }
 
+        /* layout picker (reuses year list) */
+        .layout-option {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+        .layout-option svg {
+            width: 18px;
+            height: 18px;
+            fill: currentColor;
+            flex-shrink: 0;
+        }
+
         /* LAYOUT TOGGLE AND VIEW MODES */
         .layout-btn {
             display: inline-flex;
@@ -673,9 +697,10 @@
             display: flex;
             flex-direction: column;
             gap: 8px;
-            padding: 8px 8px 8px 8px;
+            padding: 8px;
             overflow: hidden;
-            transition: max-height 0.35s ease, padding 0.35s ease, opacity 0.25s ease;
+            max-height: 5000px;
+            transition: max-height 0.5s ease-in-out, padding 0.4s ease, opacity 0.3s ease;
             opacity: 1;
         }
         
@@ -728,7 +753,7 @@
             margin-bottom: 2px;
         }
         .timeline-note {
-            font-size: 0.8rem;
+            font-size: 0.9rem;
             color: var(--text-muted);
             white-space: nowrap;
             overflow: hidden;
@@ -740,6 +765,120 @@
             border-radius: 20px;
             background: rgba(255,255,255,0.08);
             flex-shrink: 0;
+        }
+
+        /* DOTS VIEW */
+        .dots-options {
+            display: none;
+            justify-content: center;
+            margin-bottom: 16px;
+        }
+        .dots-options.active {
+            display: flex;
+        }
+        .dots-toggle-label {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            cursor: pointer;
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            user-select: none;
+        }
+        .dots-toggle-label:hover {
+            color: var(--text-main);
+        }
+        .dots-toggle-label input[type="checkbox"] {
+            appearance: none;
+            -webkit-appearance: none;
+            width: 18px;
+            height: 18px;
+            background: var(--glass-bg);
+            border: 1px solid var(--glass-border);
+            border-radius: 4px;
+            cursor: pointer;
+            position: relative;
+        }
+        .dots-toggle-label input[type="checkbox"]:checked {
+            background: var(--mood-5);
+            border-color: var(--mood-5);
+        }
+        .dots-toggle-label input[type="checkbox"]:checked::after {
+            content: '✓';
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            color: #000;
+        }
+
+        .dots-container {
+            display: none;
+            --dot-size: 10px;
+            --dot-gap: 5px;
+            --dots-cols: 22;
+            padding: 22px;
+            grid-template-columns: repeat(var(--dots-cols), var(--dot-size));
+            gap: var(--dot-gap);
+            width: fit-content;
+            max-width: 100%;
+            background: var(--glass-bg);
+            backdrop-filter: blur(16px) saturate(180%);
+            -webkit-backdrop-filter: blur(16px) saturate(180%);
+            border: 1px solid var(--glass-border);
+            border-radius: 20px;
+            box-shadow: var(--glass-shadow);
+            transition: transform 0.5s ease, border-color 0.4s ease;
+        }
+        .dots-container:hover {
+            transform: translateY(-3px);
+            border-color: rgba(255, 255, 255, 0.3);
+        }
+        .calendar-container.dots-view {
+            display: grid;
+            grid-template-columns: 1fr;
+            justify-items: center;
+        }
+        .calendar-container.dots-view .dots-container {
+            display: grid;
+        }
+        .calendar-container.dots-view .month-card,
+        .calendar-container.dots-view .timeline-month-group {
+            display: none;
+        }
+
+        .dots-dot {
+            width: var(--dot-size);
+            height: var(--dot-size);
+            border-radius: 50%;
+            flex-shrink: 0;
+            transition: transform 0.15s ease;
+        }
+        .dots-dot.past {
+            background: rgba(255, 255, 255, 0.85);
+        }
+        .dots-dot.future {
+            background: rgba(255, 255, 255, 0.2);
+        }
+        .dots-dot.filled {
+            box-shadow: 0 0 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .dots-month-separator {
+            grid-column: 1 / -1;
+            text-align: left;
+            font-size: 0.75rem;
+            color: var(--text-muted);
+            margin: 0;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* add space before each separator except the first, so the gap appears after the dots of the previous month */
+        .dots-month-separator:not(:first-of-type) {
+            margin-top: 18px;
         }
 
         /* MOBILE */
@@ -772,6 +911,34 @@
                 gap: 8px;
                 justify-content: center;
             }
+
+            .jump-today-toast {
+                left: 50%;
+                right: auto;
+                bottom: 18px;
+                transform: translateX(-50%);
+                width: calc(100vw - 32px);
+                max-width: 360px;
+            }
+
+            .jump-today-toast .glass-btn {
+                width: 100%;
+            }
+
+            /* dots view mobile */
+            .dots-container {
+                --dot-size: 8px;
+                --dot-gap: 4px;
+                padding: 16px;
+            }
+            .dots-dot {
+                width: var(--dot-size);
+                height: var(--dot-size);
+            }
+            .dots-toggle-label {
+                font-size: 0.85rem;
+            }
+
             button.glass-btn {
                 padding: 8px 16px;
                 font-size: 0.8rem;
@@ -817,6 +984,9 @@
             }
             .timeline-date {
                 font-size: 0.85rem;
+            }
+            .timeline-note {
+                font-size: 0.95rem;
             }
 
             /* modal fixes */

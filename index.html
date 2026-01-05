@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Moodelier</title>
     <link rel="stylesheet" href="css/style.css">
     <!-- firebase -->
@@ -18,8 +18,8 @@
         <div class="header-inner">
             <h1>Moodelier</h1>
             <div class="header-actions">
-                <button class="glass-btn" onclick="changeYear()">Change Year</button>
-                <button class="glass-btn layout-btn" onclick="toggleLayout()" title="Change Layout">
+                <button class="glass-btn" id="yearBtn" onclick="changeYear()">2026</button>
+                <button class="glass-btn layout-btn" onclick="changeLayout()" title="Change Layout">
                     <svg id="layoutIcon" viewBox="0 0 24 24"><path d="M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z"/></svg>
                     <span>Layout</span>
                 </button>
@@ -34,6 +34,14 @@
             <button class="nav-arrow" id="prevMonth" onclick="navigateMonth(-1)">&#8592;</button>
             <div class="nav-month-label" id="navMonthLabel">January 2026</div>
             <button class="nav-arrow" id="nextMonth" onclick="navigateMonth(1)">&#8594;</button>
+        </div>
+
+        <!-- dots view month separator toggle -->
+        <div class="dots-options" id="dotsOptions">
+            <label class="dots-toggle-label">
+                <input type="checkbox" id="dotsMonthSeparators" onchange="toggleDotsMonthSeparators()">
+                <span>Show month separators</span>
+            </label>
         </div>
 
         <div class="calendar-container" id="calendar">
@@ -172,6 +180,17 @@
                 <button class="close-btn" onclick="closeModal('yearModal')">&times;</button>
             </div>
             <div class="year-list" id="yearList"></div>
+        </div>
+    </div>
+
+    <!-- LAYOUT PICKER -->
+    <div class="modal-overlay" id="layoutModal">
+        <div class="modal-content" style="max-width: 360px;">
+            <div class="modal-header">
+                <span class="modal-title">Select Layout</span>
+                <button class="close-btn" onclick="closeModal('layoutModal')">&times;</button>
+            </div>
+            <div class="year-list" id="layoutList"></div>
         </div>
     </div>
 
