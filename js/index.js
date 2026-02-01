@@ -24,7 +24,7 @@
 
     // SETTINGS
     let YEAR = new Date().getFullYear();
-    const MOOD_COLORS = ['#ff6b6b', '#ff9f43', '#feca57', '#48dbfb', '#1dd1a1']; // 1-5 index mapped 0-4
+    const MOOD_COLORS = ['#f94b4b', '#ff8e43', '#feca57', '#48dbfb', '#1dd1a1']; // 1-5 index mapped 0-4
     const MOOD_LABELS = ['Terrible', 'Bad', 'Okay', 'Good', 'Excellent'];
     const EMOJIS = ['😊', '😄', '😋', '🥰', '😐', '☹️', '😠', '😴', '🤯', '✨'];
     const MONTHS = ['January','February','March','April','May','June','July','August','September','October','November','December'];
@@ -1277,6 +1277,13 @@
     function renderTrendGraph() {
         const svg = document.getElementById('trendGraph');
         svg.innerHTML = '';
+
+        // used pixel coordinates in the SVG's current viewport.
+        // preserves the existing visual sizing
+        const rect = svg.getBoundingClientRect();
+        const width = Math.max(1, rect.width || 0);
+        const height = Math.max(1, rect.height || 0);
+
         const today = new Date();
         const points = [];
         
@@ -1294,44 +1301,47 @@
             }
         }
 
-        // build the line
-        let pointsStr = "";
-        const widthStep = 100 / 29;
-        
-        let polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
-        polyline.classList.add('trend-line');
-        
+        // build the line + points
         let pathD = "";
         let hasStarted = false;
 
         points.forEach((value, index) => {
-            if (value !== null) {
-                const xPos = (index / 29) * 100 + "%";
-                const yPos = (100 - ((value - 0.5) / 5) * 100) + "%";
-                
-                if (!hasStarted) {
-                    pathD += `M ${xPos} ${yPos}`;
-                    hasStarted = true;
-                } else {
-                    pathD += ` L ${xPos} ${yPos}`;
-                }
-                
-                // dot for each data point
-                const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
-                circle.setAttribute("cx", xPos);
-                circle.setAttribute("cy", yPos);
-                circle.setAttribute("r", "3");
-                circle.setAttribute("fill", MOOD_COLORS[value - 1]);
-                svg.appendChild(circle);
+            // break the line when there's no data for a day
+            if (value === null) {
+                hasStarted = false;
+                return;
             }
+
+            const xPos = (index / 29) * width;
+            const yPos = height - (((value - 0.5) / 5) * height);
+
+            if (!hasStarted) {
+                pathD += `M ${xPos} ${yPos}`;
+                hasStarted = true;
+            } else {
+                pathD += ` L ${xPos} ${yPos}`;
+            }
+
+            // dot for each data point
+            const circle = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+            circle.setAttribute("cx", String(xPos));
+            circle.setAttribute("cy", String(yPos));
+            circle.setAttribute("r", "3");
+            circle.setAttribute("fill", MOOD_COLORS[value - 1]);
+            svg.appendChild(circle);
         });
 
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", pathD);
-        path.setAttribute("fill", "none");
-        path.setAttribute("stroke", "rgba(255,255,255,0.5)");
-        path.setAttribute("stroke-width", "2");
-        svg.prepend(path);
+        // faint line beneath points
+        if (pathD) {
+            const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+            path.setAttribute("d", pathD);
+            path.setAttribute("fill", "none");
+            path.setAttribute("stroke", "rgba(255,255,255,0.35)");
+            path.setAttribute("stroke-width", "1.5");
+            path.setAttribute("stroke-linecap", "round");
+            path.setAttribute("stroke-linejoin", "round");
+            svg.prepend(path);
+        }
     }
 
     function renderWeeklyChart(entries) {
